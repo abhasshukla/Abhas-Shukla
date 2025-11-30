@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Open Weather — Forecast (Open-Meteo + Nominatim)</title>
+<style>
+  :root{
+    --bg:#0f1724; --card:#0b1220; --muted:#97a0b3; --accent:#60a5fa;
+    --glass: rgba(255,255,255,0.02);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; background:
+    radial-gradient(circle at 10% 10%, rgba(96,165,250,0.06), transparent 10%),
+    linear-gradient(180deg,#071028 0%, #061220 100%);
+    color:#e6eef8; display:flex; align-items:center; justify-content:center; padding:28px;
+  }
+  .wrap{width:100%; max-width:950px;}
+  header{display:flex; gap:12px; align-items:center; margin-bottom:18px;}
+  h1{margin:0; font-size:20px; letter-spacing:0.2px}
+  .search {
+    display:flex; gap:8px; align-items:center;
+    background:var(--glass); padding:10px; border-radius:12px;
+    box-shadow: 0 6px 20px rgba(2,6,23,0.6);
+  }
+  input[type="search"]{
+    background:transparent; border:0; outline:none; color:inherit;
+    font-size:16px; width:360px;
+  }
+  button{
+    background:linear-gradient(180deg,var(--accent), #3b82f6);
+    border:0; color:white; padding:10px 14px; border-radius:10px; cursor:pointer;
+    font-weight:600;
+  }
+  main{display:grid; grid-template-columns: 1fr 360px; gap:18px;}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+        border-radius:14px; padding:18px; box-shadow: 0 8px 30px rgba(2,6,23,0.6);}
+  .current{display:flex; gap:18px; align-items:center;}
+  .temp{font-size:56px; font-weight:700; line-height:1}
+  .meta{color:var(--muted); font-size:14px}
+  .small{font-size:13px; color:var(--muted)}
+  .forecast{display:flex; gap:10px; overflow:auto; margin-top:12px; padding-bottom:6px}
+  .day{min-width:84px; padding:10px; border-radius:10px; background:rgba(255,255,255,0.02); text-align:center}
+  .hourly{margin-top:12px; max-height:240px; overflow:auto}
+  .coords{font-size:12px; color:var(--muted); margin-top:8px}
+  footer{margin-top:12px; color:var(--muted); font-size:13px}
+  .loader{width:18px;height:18px;border-radius:50%;border:3px solid rgba(255,255,255,0.08);border-top-color:var(--accent); animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media(max-width:880px){
+    main{grid-template-columns: 1fr; }
+    input[type="search"]{width:180px}
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Open Weather — Forecast</h1>
+        <div class="small">Search any city. Uses Open-Meteo (no key) + Nominatim geocoding.</div>
+      </div>
+      <div style="margin-left:auto" class="search" role="search">
+        <input id="cityInput" type="search" placeholder="Type city (e.g., Mumbai, Tokyo, London)" aria-label="City name" />
+        <button id="searchBtn">Search</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="card" id="leftCard">
+        <div id="status" class="small">Enter a city and press Search</div>
+        <div id="currentArea" style="display:none;margin-top:12px">
+          <div class="current">
+            <div>
+              <div id="place" style="font-weight:600; font-size:18px">—</div>
+              <div class="coords" id="coords">—</div>
+            </div>
+            <div style="margin-left:auto; text-align:right">
+              <div class="temp" id="temp">--°</div>
+              <div class="meta" id="cond">—</div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:12px; margin-top:10px; color:var(--muted); font-size:14px;">
+            <div>Wind: <span id="wind">—</span></div>
+            <div>Humidity: <span id="hum">—</span></div>
+            <div>Precip: <span id="prec">—</span></div>
+          </div>
+
+          <div class="hourly" id="hourlyList" aria-live="polite" style="display:none"></div>
+
+          <div class="small" style="margin-top:12px">7-day forecast</div>
+          <div class="forecast" id="forecastList" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <aside class="card" id="rightCard">
+        <div style="display:flex; align-items:center; justify-content:space-between">
+          <strong>Details</strong>
+          <span class="small" id="updatedAt">—</span>
+        </div>
+        <div style="margin-top:12px" class="small">
+          This demo uses:
+          <ul>
+            <li>Open-Meteo Forecast API (no API key required)</li>
+            <li>Nominatim (OpenStreetMap) for geocoding</li>
+          </ul>
+        </div>
+
+        <div style="margin-top:12px">
+          <button id="useMyLocation" style="width:100%; padding:10px; border-radius:8px; border:0; cursor:pointer">Use my browser location</button>
+        </div>
+
+        <footer>
+          <div style="margin-top:12px">
+            Note: Nominatim public instance has usage limits — for production or heavy use consider your own geocoding service/instance. Data from Open-Meteo. 
+          </div>
+        </footer>
+      </aside>
+    </main>
+  </div>
+
+<script>
+/*
+  Weather demo using:
+   - Nominatim (OpenStreetMap) for city -> lat/lon
+     docs: https://nominatim.org/ (public instance: https://nominatim.openstreetmap.org)
+   - Open-Meteo for forecast/current: https://api.open-meteo.com/v1/forecast
+     docs: https://open-meteo.com/en/docs
+
+  Tip: Respect Nominatim usage policy when making many requests.
+*/
+
+const searchBtn = document.getElementById('searchBtn');
+const cityInput = document.getElementById('cityInput');
+const statusEl = document.getElementById('status');
+
+searchBtn.addEventListener('click', () => doSearch(cityInput.value.trim()));
+cityInput.addEventListener('keyup', (e) => { if(e.key === 'Enter') doSearch(cityInput.value.trim()); });
+
+document.getElementById('useMyLocation').addEventListener('click', () => {
+  if(!navigator.geolocation){ alert('Geolocation not supported'); return;}
+  status('Getting your location...'); showLoader();
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const { latitude, longitude } = pos.coords;
+    await fetchWeatherByCoords(latitude, longitude, 'My location');
+  }, (err)=>{ status('Location access denied or failed'); hideLoader();});
+});
+
+function status(text){ statusEl.textContent = text; }
+function showLoader(){ statusEl.innerHTML = '<span class="loader" aria-hidden="true"></span> Loading...'; }
+function hideLoader(){ /* nothing */ }
+
+async function doSearch(q){
+  if(!q){ status('Please enter a city name'); return;}
+  status(`Searching for "${q}" ...`); showLoader();
+
+  try{
+    // Nominatim forward geocoding (public instance). Keep requests light.
+    const nomUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&limit=1&addressdetails=1`;
+    const resGeo = await fetch(nomUrl, { headers: { 'Accept-Language': 'en' }});
+    if(!resGeo.ok) throw new Error('Geocoding error');
+    const geoJson = await resGeo.json();
+    if(!geoJson || geoJson.length === 0) { status('No results found. Try a different name.'); return; }
+    const place = geoJson[0];
+    const name = place.display_name || (place.address && place.address.city) || q;
+    const lat = parseFloat(place.lat), lon = parseFloat(place.lon);
+
+    await fetchWeatherByCoords(lat, lon, name);
+  } catch(err){
+    console.error(err);
+    status('Failed to geocode or fetch weather. See console for details.');
+  }
+}
+
+async function fetchWeatherByCoords(lat, lon, placeName){
+  status(`Fetching weather for ${placeName}...`); 
+  // Open-Meteo forecast request: current_weather + daily 7-day + hourly snapshot
+  // We'll request a set of hourly variables and daily aggregates. timezone=auto returns times in local timezone.
+  const hourly = ['temperature_2m','relativehumidity_2m','precipitation','weathercode','windspeed_10m'].join(',');
+  const daily = ['temperature_2m_max','temperature_2m_min','precipitation_sum'].join(',');
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&current_weather=true&hourly=${hourly}&daily=${daily}&timezone=auto&forecast_days=7`;
+
+  try{
+    const r = await fetch(url);
+    if(!r.ok) throw new Error('Open-Meteo fetch failed');
+    const data = await r.json();
+
+    renderWeather(data, lat, lon, placeName);
+  } catch(err){
+    console.error(err);
+    status('Failed to fetch from Open-Meteo');
+  }
+}
+
+function renderWeather(data, lat, lon, placeName){
+  // show place and coords
+  document.getElementById('place').textContent = placeName;
+  document.getElementById('coords').textContent = `Lat ${lat.toFixed(3)}, Lon ${lon.toFixed(3)}`;
+
+  // current weather block
+  const cw = data.current_weather || null;
+  const updated = new Date().toLocaleString();
+  document.getElementById('updatedAt').textContent = `Updated ${updated}`;
+
+  const tempEl = document.getElementById('temp');
+  const condEl = document.getElementById('cond');
+  const windEl = document.getElementById('wind');
+  const humEl = document.getElementById('hum');
+  const precEl = document.getElementById('prec');
+
+  if(cw){
+    tempEl.textContent = Math.round(cw.temperature) + '°C';
+    condEl.textContent = codeToText(cw.weathercode) + ` · ${cw.is_day ? 'day' : 'night'}`;
+    windEl.textContent = `${cw.windspeed ?? '—'} m/s`;
+  } else {
+    tempEl.textContent = '--°';
+    condEl.textContent = '—';
+    windEl.textContent = '—';
+  }
+
+  // Extract humidity/precip from hourly arrays at the nearest hour to current time
+  try{
+    const now = data.hourly.time;
+    const idx = indexOfNearestHour(data.hourly.time, new Date());
+    if(idx>=0){
+      humEl.textContent = (data.hourly.relativehumidity_2m && data.hourly.relativehumidity_2m[idx] !== undefined) ? (Math.round(data.hourly.relativehumidity_2m[idx]) + '%') : '—';
+      precEl.textContent = (data.hourly.precipitation && data.hourly.precipitation[idx] !== undefined) ? (data.hourly.precipitation[idx] + ' mm') : '—';
+    } else {
+      humEl.textContent = '—';
+      precEl.textContent = '—';
+    }
+  } catch(e){ humEl.textContent='—'; precEl.textContent='—'; }
+
+  // hourly snapshot (next 12 hours)
+  const hourlyContainer = document.getElementById('hourlyList');
+  hourlyContainer.innerHTML = '';
+  if(data.hourly && data.hourly.time){
+    hourlyContainer.style.display = 'block';
+    const times = data.hourly.time;
+    const temps = data.hourly.temperature_2m;
+    const wcodes = data.hourly.weathercode;
+    const len = Math.min(times.length, 24);
+    // show next 12 entries from current index
+    const start = Math.max(0, indexOfNearestHour(times, new Date()));
+    for(let i = start; i < Math.min(start + 12, len); i++){
+      const t = new Date(times[i]);
+      const hourStr = t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      const div = document.createElement('div');
+      div.style.display='flex'; div.style.justifyContent='space-between'; div.style.padding='6px 0';
+      div.innerHTML = `<div class="small">${hourStr}</div><div class="small">${Math.round(temps[i])}° • ${codeToShort(wcodes[i])}</div>`;
+      hourlyContainer.appendChild(div);
+    }
+  } else {
+    hourlyContainer.style.display = 'none';
+  }
+
+  // daily forecast (7 days)
+  const forecastList = document.getElementById('forecastList');
+  forecastList.innerHTML = '';
+  if(data.daily && data.daily.time){
+    for(let i=0;i<data.daily.time.length;i++){
+      const dayName = new Date(data.daily.time[i]).toLocaleDateString(undefined,{weekday:'short'});
+      const tmax = Math.round(data.daily.temperature_2m_max[i]);
+      const tmin = Math.round(data.daily.temperature_2m_min[i]);
+      const p = data.daily.precipitation_sum[i] ?? 0;
+      const div = document.createElement('div'); div.className='day';
+      div.innerHTML = `<div style="font-weight:600">${dayName}</div>
+                       <div style="margin-top:6px">${tmax}° / ${tmin}°</div>
+                       <div class="small" style="margin-top:6px">${p.toFixed(1)} mm</div>`;
+      forecastList.appendChild(div);
+    }
+  }
+
+  // show section
+  document.getElementById('currentArea').style.display = 'block';
+  status('Forecast loaded — data from Open-Meteo');
+}
+
+/* helper: find index of nearest hour-string in array of ISO times */
+function indexOfNearestHour(timesArray, dateObj){
+  if(!Array.isArray(timesArray)) return -1;
+  // timesArray are ISO strings like "2025-11-30T12:00"
+  let best = -1; let bestDiff = Infinity;
+  for(let i=0;i<timesArray.length;i++){
+    const t = new Date(timesArray[i]);
+    const diff = Math.abs(t - dateObj);
+    if(diff < bestDiff){ bestDiff = diff; best = i; }
+  }
+  return best;
+}
+
+/* Minimal weather code -> text (based on WMO / Open-Meteo grouping).
+   This is a compact mapping used for friendly output. */
+function codeToText(code){
+  // code may be number or string
+  code = Number(code);
+  if(code === 0) return 'Clear sky';
+  if(code >= 1 && code <= 3) return 'Mainly clear / partly cloudy';
+  if([45,48].includes(code)) return 'Fog';
+  if((51 <= code && code <= 67) || (80 <= code && code <= 86)) return 'Rain / Showers';
+  if((71 <= code && code <= 77) || (85 <= code && code <= 86)) return 'Snow';
+  if((95 <= code && code <= 99)) return 'Thunderstorm';
+  return 'Unknown';
+}
+function codeToShort(code){
+  const t = codeToText(code);
+  if(t.length > 12) return t.slice(0,12) + '…'; else return t;
+}
+</script>
+</body>
+</html>
