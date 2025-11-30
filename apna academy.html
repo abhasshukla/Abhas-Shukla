@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>StateAcademy — Demo Clone (Project)</title>
+  <meta name="description" content="Functional demo clone of an educational landing site (example project)." />
+  <style>
+    :root{
+      --accent:#0066cc; --dark:#0f1724; --muted:#6b7280; --card:#ffffff; --glass: rgba(255,255,255,0.06);
+      --radius:12px; --shadow: 0 8px 24px rgba(15,23,36,0.08);
+      font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    }
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#f4f7fb, #ffffff);color:#05203b}
+    header{position:sticky;top:0;z-index:60;background:rgba(255,255,255,0.9);backdrop-filter: blur(6px);box-shadow:0 2px 8px rgba(10,10,10,0.04)}
+    .container{width:min(1150px,94%);margin:0 auto}
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:14px 0}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#00a3ff);display:inline-grid;place-items:center;color:white;font-weight:700}
+    nav ul{display:flex;gap:18px;list-style:none;padding:0;margin:0}
+    nav a{color:var(--dark);text-decoration:none;font-weight:600}
+    .hero{display:grid;grid-template-columns:1fr 420px;gap:28px;padding:44px 0;align-items:center}
+    .hero-card{background:linear-gradient(180deg,rgba(255,255,255,0.98),#fff);padding:28px;border-radius:16px;box-shadow:var(--shadow)}
+    h1{margin:0 0 12px;font-size:28px}
+    p.lead{margin:0 0 18px;color:var(--muted)}
+    .search{display:flex;gap:8px}
+    .search input{flex:1;padding:10px 12px;border-radius:10px;border:1px solid #e6eef8}
+    .btn{background:var(--accent);color:#fff;padding:10px 14px;border-radius:10px;border:none;font-weight:700;cursor:pointer}
+    .secondary{background:transparent;color:var(--accent);border:2px solid var(--accent)}
+
+    /* slider */
+    .slider{position:relative;border-radius:12px;overflow:hidden;height:240px;background:linear-gradient(135deg,#e8f2ff,#f8fbff);display:flex;align-items:center;justify-content:center}
+    .slides{display:flex;transition:transform 450ms ease}
+    .slide{min-width:100%;padding:28px;box-sizing:border-box}
+    .slide h2{margin:0 0 8px}
+    .dots{display:flex;gap:8px;justify-content:center;margin-top:12px}
+    .dot{width:10px;height:10px;border-radius:50%;background:#c6d6ea}
+    .dot.active{background:var(--accent)}
+
+    /* courses */
+    .section{padding:36px 0}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+    .card{background:var(--card);padding:18px;border-radius:12px;box-shadow:var(--shadow);border:1px solid #eef6ff}
+    .card h3{margin:0 0 8px;font-size:18px}
+    .meta{color:var(--muted);font-size:13px;margin-bottom:12px}
+    .course-actions{display:flex;gap:8px}
+
+    /* testimonials */
+    .testimonials{display:flex;gap:14px;overflow:auto;padding-bottom:6px}
+    .t{min-width:260px;background:var(--glass);padding:14px;border-radius:12px}
+
+    /* footer */
+    footer{padding:28px 0;color:var(--muted)}
+    .footer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+
+    /* modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(3,7,18,0.45);display:none;place-items:center}
+    .modal{background:white;padding:18px;border-radius:12px;width:min(520px,94%);box-shadow:0 30px 60px rgba(2,6,23,0.4)}
+
+    /* responsive */
+    @media (max-width:900px){.hero{grid-template-columns:1fr;}.hero .slider{order:2}.nav ul{display:none}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container nav">
+      <div class="brand">
+        <div class="logo">SA</div>
+        <div>
+          <div style="font-weight:800">StateAcademy (Demo)</div>
+          <div style="font-size:12px;color:var(--muted)">Learning • Courses • Career</div>
+        </div>
+      </div>
+      <nav>
+        <ul>
+          <li><a href="#courses">Courses</a></li>
+          <li><a href="#about">About</a></li>
+          <li><a href="#testimonials">Testimonials</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <div class="hero-card">
+        <h1>Upskill with industry-aligned courses</h1>
+        <p class="lead">Interactive classes, project-based learning and certification to help you land better opportunities.</p>
+        <div class="search">
+          <input id="courseSearch" placeholder="Search courses, e.g. Data Science" />
+          <button id="searchBtn" class="btn">Search</button>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:8px">
+          <button id="allCoursesBtn" class="secondary">All Courses</button>
+          <button id="featuredBtn" class="btn">Featured</button>
+        </div>
+        <div style="margin-top:18px;color:var(--muted);font-size:13px">Subscribed users: <strong id="subcount">0</strong></div>
+      </div>
+
+      <aside>
+        <div class="slider" aria-hidden="false">
+          <div class="slides" id="slides">
+            <div class="slide">
+              <h2>Live classes • 1:1 doubt help</h2>
+              <p class="lead">Attend live sessions with expert mentors and get personal feedback on projects.</p>
+            </div>
+            <div class="slide">
+              <h2>Certificate on completion</h2>
+              <p class="lead">Showcase your achievements to recruiters with a verified certificate.</p>
+            </div>
+            <div class="slide">
+              <h2>Placement assistance</h2>
+              <p class="lead">Get interview prep, resume reviews and mock interviews.</p>
+            </div>
+          </div>
+        </div>
+        <div class="dots" id="dots"></div>
+      </aside>
+    </section>
+
+    <section id="courses" class="section">
+      <h2>Popular Courses</h2>
+      <p class="lead">Filter, search and open any course to enroll (demo forms are functional and persist in localStorage).</p>
+      <div style="margin:12px 0;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" onclick="filterTag('All')">All</button>
+        <button class="secondary" onclick="filterTag('Data')">Data Science</button>
+        <button class="secondary" onclick="filterTag('Web')">Web Dev</button>
+        <button class="secondary" onclick="filterTag('AI')">AI/ML</button>
+      </div>
+
+      <div class="grid" id="coursesGrid">
+        <!-- JS will populate courses here -->
+      </div>
+    </section>
+
+    <section id="about" class="section">
+      <h2>Why learners choose us</h2>
+      <div class="grid">
+        <div class="card"><strong>Project-based</strong><p class="meta">Real projects for portfolios.</p></div>
+        <div class="card"><strong>Mentors</strong><p class="meta">Experienced instructors and TAs.</p></div>
+        <div class="card"><strong>Placement</strong><p class="meta">Interview support and hiring partners.</p></div>
+      </div>
+    </section>
+
+    <section id="testimonials" class="section">
+      <h2>What students say</h2>
+      <div class="testimonials" id="testi">
+        <div class="t">"Great mentoring — helped me crack interviews." — <strong>Priya</strong></div>
+        <div class="t">"Projects were industry-relevant." — <strong>Ramesh</strong></div>
+        <div class="t">"Hands-on sessions, very practical." — <strong>Sana</strong></div>
+      </div>
+    </section>
+
+    <section id="contact" class="section">
+      <h2>Contact / Enroll</h2>
+      <div class="grid">
+        <div class="card">
+          <form id="contactForm">
+            <label style="display:block;margin-bottom:8px">Name<input required name="name" placeholder="Your name" style="width:100%;padding:8px;margin-top:6px;border-radius:8px;border:1px solid #e6eef8"/></label>
+            <label style="display:block;margin-bottom:8px">Email<input required type="email" name="email" placeholder="you@email.com" style="width:100%;padding:8px;margin-top:6px;border-radius:8px;border:1px solid #e6eef8"/></label>
+            <label style="display:block;margin-bottom:8px">Message<textarea name="message" placeholder="Tell us what you're looking for" style="width:100%;padding:8px;margin-top:6px;border-radius:8px;border:1px solid #e6eef8"></textarea></label>
+            <div style="display:flex;gap:8px;justify-content:flex-end"><button type="submit" class="btn">Send</button></div>
+          </form>
+        </div>
+        <div class="card">
+          <h3>Subscribe to newsletter</h3>
+          <p class="meta">Get updates about new batches, discounts and free classes.</p>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <input id="newsletterEmail" placeholder="Your email" style="flex:1;padding:8px;border-radius:8px;border:1px solid #e6eef8" />
+            <button id="subscribeBtn" class="btn">Subscribe</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" role="dialog" aria-modal="true" id="modal">
+      <!-- modal content injected by JS -->
+    </div>
+  </div>
+
+  <footer>
+    <div class="container footer-grid">
+      <div>
+        <div style="font-weight:800">StateAcademy (Demo)</div>
+        <div style="font-size:13px;color:var(--muted)">This is a functional demo project — content and assets are original placeholders.</div>
+      </div>
+      <div>
+        <div style="font-weight:700">Links</div>
+        <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">
+          <a href="#courses">Courses</a>
+          <a href="#contact">Contact</a>
+          <a href="#about">About</a>
+        </div>
+      </div>
+      <div>
+        <div style="font-weight:700">Follow</div>
+        <div style="margin-top:8px;color:var(--muted)">Twitter • LinkedIn • YouTube</div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // ---- Demo dataset (original content) ----
+    const COURSES = [
+      {id:1,title:'Full-Stack Web Development',tag:'Web',duration:'6 months',price:'₹25,000',desc:'Build responsive websites and single-page apps using modern tools.'},
+      {id:2,title:'Data Science with Python',tag:'Data',duration:'5 months',price:'₹30,000',desc:'Statistics, visualization, machine learning and real datasets.'},
+      {id:3,title:'AI & ML Engineer',tag:'AI',duration:'7 months',price:'₹45,000',desc:'Deep learning, NLP and deployment of models.'},
+      {id:4,title:'Front-end with React',tag:'Web',duration:'3 months',price:'₹18,000',desc:'React, hooks, state management and component libraries.'},
+      {id:5,title:'Business Analytics',tag:'Data',duration:'4 months',price:'₹22,000',desc:'Excel, PowerBI, SQL and data-driven decision making.'}
+    ];
+
+    // Persisted state helpers
+    const DB = {
+      enrollments: JSON.parse(localStorage.getItem('demo_enrollments')||'[]'),
+      subscribers: JSON.parse(localStorage.getItem('demo_subs')||'[]')
+    };
+
+    // render courses
+    const coursesGrid = document.getElementById('coursesGrid');
+    function renderCourses(list){
+      coursesGrid.innerHTML = '';
+      list.forEach(c=>{
+        const el = document.createElement('div');el.className='card';
+        el.innerHTML = `<h3>${c.title}</h3><div class="meta">${c.tag} • ${c.duration} • ${c.price}</div><p style="min-height:44px">${c.desc}</p><div class="course-actions"><button class="btn" onclick="openEnroll(${c.id})">Enroll</button><button class="secondary" onclick="openDetails(${c.id})">Details</button></div>`;
+        coursesGrid.appendChild(el);
+      });
+    }
+    renderCourses(COURSES);
+
+    // filter and search
+    window.filterTag = (tag)=>{
+      if(tag==='All') return renderCourses(COURSES);
+      renderCourses(COURSES.filter(c=>c.tag===tag));
+    }
+    document.getElementById('searchBtn').addEventListener('click',()=>{
+      const q = document.getElementById('courseSearch').value.trim().toLowerCase();
+      if(!q) return renderCourses(COURSES);
+      renderCourses(COURSES.filter(c=>c.title.toLowerCase().includes(q) || c.desc.toLowerCase().includes(q)));
+    });
+    document.getElementById('allCoursesBtn').addEventListener('click',()=>renderCourses(COURSES));
+    document.getElementById('featuredBtn').addEventListener('click',()=>renderCourses(COURSES.slice(0,3)));
+
+    // modal utilities
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    function showModal(html){
+      document.getElementById('modal').innerHTML = html;
+      modalBackdrop.style.display = 'grid';
+    }
+    function closeModal(){ modalBackdrop.style.display = 'none'; }
+    modalBackdrop.addEventListener('click', (e)=>{ if(e.target===modalBackdrop) closeModal(); });
+
+    window.openDetails = (id)=>{
+      const c = COURSES.find(x=>x.id===id);
+      showModal(`<h3>${c.title}</h3><p class="meta">${c.tag} • ${c.duration} • ${c.price}</p><p>${c.desc} \n\nCourse syllabus and schedule would be shown here in a full product.</p><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="secondary" onclick="closeModal()">Close</button><button class="btn" onclick="openEnroll(${id})">Enroll</button></div>`);
+    }
+
+    window.openEnroll = (id)=>{
+      const c = COURSES.find(x=>x.id===id);
+      showModal(`<h3>Enroll: ${c.title}</h3><form id="enrollForm"><label style='display:block'>Name<input name='name' required style='width:100%;padding:8px;margin-top:6px;border-radius:8px;border:1px solid #e6eef8'/></label><label style='display:block;margin-top:8px'>Email<input type='email' name='email' required style='width:100%;padding:8px;margin-top:6px;border-radius:8px;border:1px solid #e6eef8'/></label><label style='display:block;margin-top:8px'>Phone<input name='phone' placeholder='(optional)' style='width:100%;padding:8px;margin-top:6px;border-radius:8px;border:1px solid #e6eef8'/></label><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button type='button' class='secondary' onclick='closeModal()'>Cancel</button><button class='btn' type='submit'>Submit</button></div></form>`);
+
+      document.getElementById('enrollForm').addEventListener('submit', (ev)=>{
+        ev.preventDefault();
+        const data = Object.fromEntries(new FormData(ev.target).entries());
+        data.courseId = id; data.courseTitle = c.title; data.date = new Date().toISOString();
+        DB.enrollments.push(data);
+        localStorage.setItem('demo_enrollments', JSON.stringify(DB.enrollments));
+        alert('Enrollment submitted (demo). Data saved to localStorage.');
+        closeModal();
+      });
+    }
+
+    // contact form
+    document.getElementById('contactForm').addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target).entries());
+      data.date = new Date().toISOString();
+      DB.enrollments.push({contact:data});
+      localStorage.setItem('demo_enrollments', JSON.stringify(DB.enrollments));
+      alert('Message sent (demo). We saved it locally.');
+      e.target.reset();
+    });
+
+    // newsletter
+    const subCountEl = document.getElementById('subcount');
+    function updateSubCount(){ subCountEl.textContent = DB.subscribers.length; }
+    document.getElementById('subscribeBtn').addEventListener('click', ()=>{
+      const em = document.getElementById('newsletterEmail').value.trim();
+      if(!em || !em.includes('@')) return alert('Please enter a valid email');
+      if(DB.subscribers.includes(em)) return alert('Already subscribed');
+      DB.subscribers.push(em);
+      localStorage.setItem('demo_subs', JSON.stringify(DB.subscribers));
+      updateSubCount();
+      alert('Subscribed (demo).');
+      document.getElementById('newsletterEmail').value='';
+    });
+    updateSubCount();
+
+    // slider logic
+    let slideIndex = 0; const slidesWrap = document.getElementById('slides'); const dotsWrap = document.getElementById('dots');
+    function renderDots(){ dotsWrap.innerHTML=''; for(let i=0;i<slidesWrap.children.length;i++){ const d = document.createElement('div'); d.className='dot'+(i===slideIndex?' active':''); d.addEventListener('click', ()=>{ slideIndex=i; updateSlider(); }); dotsWrap.appendChild(d);} }
+    function updateSlider(){ slidesWrap.style.transform = `translateX(-${slideIndex*100}%)`; renderDots(); }
+    function nextSlide(){ slideIndex = (slideIndex+1)%slidesWrap.children.length; updateSlider(); }
+    renderDots(); setInterval(nextSlide,4000);
+
+    // small utilities for dev/testing
+    window.__DEMO = {COURSES, DB};
+
+    // quick keyboard shortcut: press 'E' to open first course enroll (demo)
+    window.addEventListener('keydown', (e)=>{ if(e.key.toLowerCase()==='e') openEnroll(1); });
+  </script>
+</body>
+</html>
